@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections;
+using System.Linq;
+using BizTalkComponents.Utils;
 
 namespace BizTalkComponents.PipelineComponents.CompressMessage
 {
@@ -11,9 +13,35 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage
 
         public IEnumerator Validate(object projectSystem)
         {
-            return null;
+            return ValidationHelper.Validate(this, false).ToArray().GetEnumerator();
+        }
+
+        public bool Validate(out string errorMessage)
+        {
+            var errors = ValidationHelper.Validate(this, true).ToArray();
+
+            if (errors.Any())
+            {
+                errorMessage = string.Join(",", errors);
+
+                return false;
+            }
+
+            errorMessage = string.Empty;
+
+            return true;
         }
 
         public IntPtr Icon { get { return IntPtr.Zero; } }
+
+        public void GetClassID(out Guid classID)
+        {
+            classID = Guid.Parse("");
+        }
+
+        public void InitNew()
+        {
+            
+        }
     }
 }

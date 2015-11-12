@@ -21,10 +21,10 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Tests.UnitTests
             msgPart2.PartProperties.Write("ReceivedFileName", "http://schemas.microsoft.com/BizTalk/2003/file-properties", "invoice2.xml");
             msgPart3.PartProperties.Write("ReceivedFileName", "http://schemas.microsoft.com/BizTalk/2003/file-properties", "invoice3.xml");
             var msg = MessageHelper.CreateFromString("<testmessage1></testmessage1>");
-            msg.AddPart("invoice2",msgPart2,false);
+            msg.AddPart("invoice2", msgPart2, false);
             msg.AddPart("invoice3", msgPart3, false);
-            msg.BodyPart.PartProperties.Write("ReceivedFileName","http://schemas.microsoft.com/BizTalk/2003/file-properties","invoice1.xml");
-            pipeline.AddComponent(component,PipelineStage.Encode);
+            msg.BodyPart.PartProperties.Write("ReceivedFileName", "http://schemas.microsoft.com/BizTalk/2003/file-properties", "invoice1.xml");
+            pipeline.AddComponent(component, PipelineStage.Encode);
 
             var result = pipeline.Execute(msg);
 
@@ -33,7 +33,7 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Tests.UnitTests
             int i = 1;
             while (zipEntry != null)
             {
-                Assert.AreEqual(string.Format("invoice{0}.xml",i),zipEntry.Name);
+                Assert.AreEqual(string.Format("invoice{0}.xml", i), zipEntry.Name);
                 zipEntry = zipInputStream.GetNextEntry();
                 i++;
             }
@@ -63,9 +63,52 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Tests.UnitTests
             {
                 Guid g;
                 Assert.IsTrue(Guid.TryParse(Path.GetFileNameWithoutExtension(zipEntry.Name), out g));
-                Assert.AreEqual(Path.GetExtension(zipEntry.Name), ".xml");
+                Assert.AreEqual(".xml", Path.GetExtension(zipEntry.Name));
                 zipEntry = zipInputStream.GetNextEntry();
             }
+        }
+
+        [TestMethod]
+        public void TestCompressSingleMessagePart()
+        {
+            var pipeline = PipelineFactory.CreateEmptySendPipeline();
+
+            var component = new CompressMessage {DefaultZipEntryFileExtension = "xml"};
+
+            var msg = MessageHelper.CreateFromString("<testmessage1></testmessage1>");
+            
+            pipeline.AddComponent(component, PipelineStage.Encode);
+
+            var result = pipeline.Execute(msg);
+
+            ZipInputStream zipInputStream = new ZipInputStream(result.BodyPart.GetOriginalDataStream());
+            ZipEntry zipEntry = zipInputStream.GetNextEntry();
+            int i = 0;
+            while (zipEntry != null)
+            {
+                Guid g;
+                Assert.IsTrue(Guid.TryParse(Path.GetFileNameWithoutExtension(zipEntry.Name), out g));
+                Assert.AreEqual(".xml", Path.GetExtension(zipEntry.Name));
+                zipEntry = zipInputStream.GetNextEntry();
+                i++;
+            }
+
+            Assert.AreEqual(1,i);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestCompressInvalidExtension()
+        {
+            var pipeline = PipelineFactory.CreateEmptySendPipeline();
+
+            var component = new CompressMessage { DefaultZipEntryFileExtension = ".xml" };
+
+            var msg = MessageHelper.CreateFromString("<testmessage1></testmessage1>");
+
+            pipeline.AddComponent(component, PipelineStage.Encode);
+
+            var result = pipeline.Execute(msg);
         }
     }
 }

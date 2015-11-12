@@ -9,7 +9,8 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Utils
         private static readonly Dictionary<string, string> FileExtensions = new Dictionary<string, string>()
                 {
                     {"application/pdf", ".pdf"},
-                    {"application/xml", ".xml"}
+                    {"application/xml", ".xml"},
+                    {"text/xml", ".xml"}
                 };
 
 
