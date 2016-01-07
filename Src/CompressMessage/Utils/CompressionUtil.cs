@@ -1,39 +1,62 @@
-﻿using System;
+﻿using Microsoft.BizTalk.Streaming;
+using System;
 using System.IO;
-using ICSharpCode.SharpZipLib.Core;
-using ICSharpCode.SharpZipLib.Zip;
-using Microsoft.BizTalk.Message.Interop;
+using System.IO.Compression;
 
 namespace BizTalkComponents.PipelineComponents.CompressMessage.Utils
 {
-    public class CompressionUtil
+    public class CompressionUtil : IDisposable
     {
-        private readonly ZipOutputStream _zipStream;
-        private readonly MemoryStream _outputMemStream;
+        private readonly ZipArchive _zipArchive;
+        private readonly Stream _outputStream;
 
         public CompressionUtil()
         {
-            _outputMemStream = new MemoryStream();
-            _zipStream = new ZipOutputStream(_outputMemStream);
-            _zipStream.SetLevel(3);
+            _outputStream = new VirtualStream();
+            _zipArchive = new ZipArchive(_outputStream, ZipArchiveMode.Create, true);
         }
 
-        public void AddMessage(Stream msg, string filename)
+        public void AddMessage(Stream msg, string filename, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
-            var entry = new ZipEntry(filename) {DateTime = DateTime.Now};
+            var entry = _zipArchive.CreateEntry(filename, compressionLevel);
 
-            _zipStream.PutNextEntry(entry);
-            StreamUtils.Copy(msg, _zipStream, new byte[4096]);
-            _zipStream.CloseEntry();
+            using (var entryStream = entry.Open())
+            {
+                msg.CopyTo(entryStream);
+            }
+
         }
 
-        public MemoryStream GetZip()
+        public Stream GetZip()
         {
-            _zipStream.IsStreamOwner = false;
-            _zipStream.Close();
-            _outputMemStream.Position = 0;
+            Dispose();
+            _outputStream.Position = 0;
 
-            return _outputMemStream;
+            return _outputStream;
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _zipArchive.Dispose();
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+        }
+        #endregion
     }
 }

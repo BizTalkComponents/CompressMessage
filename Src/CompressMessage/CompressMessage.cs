@@ -33,27 +33,30 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage
                 throw new ArgumentException(errorMessage);
             }
 
-            var cu = new CompressionUtil();
-            
-            for (var i = 0; i < pInMsg.PartCount; i++)
-            {
-                string partName;
-                var part = pInMsg.GetPartByIndex(i, out partName);
-
-                
-                var fileName = GetFileName(part);
-
-                cu.AddMessage(part.GetOriginalDataStream(), fileName);
-            }
-
             var outMsg = pContext.GetMessageFactory().CreateMessage();
             outMsg.Context = pInMsg.Context;
             var bodyPart = pContext.GetMessageFactory().CreateMessagePart();
-            bodyPart.Data = cu.GetZip();
-            bodyPart.Charset = "utf-8";
-            bodyPart.ContentType = "application/zip";
 
-            outMsg.AddPart("Body",bodyPart,true);
+            using (var compressionUtil = new CompressionUtil())
+            {
+                for (var i = 0; i < pInMsg.PartCount; i++)
+                {
+                    string partName;
+                    var part = pInMsg.GetPartByIndex(i, out partName);
+
+
+                    var fileName = GetFileName(part);
+
+                    compressionUtil.AddMessage(part.GetOriginalDataStream(), fileName);
+                }
+
+                bodyPart.Data = compressionUtil.GetZip();
+                pContext.ResourceTracker.AddResource(bodyPart.Data);
+                bodyPart.Charset = "utf-8";
+                bodyPart.ContentType = "application/zip";
+            }
+
+            outMsg.AddPart("Body", bodyPart, true);
 
             return outMsg;
         }
@@ -72,15 +75,15 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage
             {
                 if (!string.IsNullOrEmpty(part.ContentType))
                 {
-                    extension = MimeUtils.GetFileExtensionForMimeType(part.ContentType);    
+                    extension = MimeUtils.GetFileExtensionForMimeType(part.ContentType);
                 }
                 else if (!string.IsNullOrEmpty(DefaultZipEntryFileExtension))
                 {
-                    extension = string.Concat(".",DefaultZipEntryFileExtension);
+                    extension = string.Concat(".", DefaultZipEntryFileExtension);
                 }
 
-                
-                fileName = Guid.NewGuid() + extension;    
+
+                fileName = Guid.NewGuid() + extension;
             }
 
             return fileName;
@@ -88,7 +91,7 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage
 
         public void Load(IPropertyBag propertyBag, int errorLog)
         {
-            DefaultZipEntryFileExtension = PropertyBagHelper.ToStringOrDefault(PropertyBagHelper.ReadPropertyBag<string>(propertyBag, DefaultZipEntryFileExtensionPropertyName,DefaultZipEntryFileExtension),string.Empty);
+            DefaultZipEntryFileExtension = PropertyBagHelper.ToStringOrDefault(PropertyBagHelper.ReadPropertyBag<string>(propertyBag, DefaultZipEntryFileExtensionPropertyName, DefaultZipEntryFileExtension), string.Empty);
         }
 
         public void Save(IPropertyBag propertyBag, bool clearDirty, bool saveAllProperties)
