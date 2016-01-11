@@ -91,7 +91,7 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage
 
         public void Load(IPropertyBag propertyBag, int errorLog)
         {
-            DefaultZipEntryFileExtension = PropertyBagHelper.ToStringOrDefault(PropertyBagHelper.ReadPropertyBag<string>(propertyBag, DefaultZipEntryFileExtensionPropertyName, DefaultZipEntryFileExtension), string.Empty);
+            DefaultZipEntryFileExtension = PropertyBagHelper.ReadPropertyBag(propertyBag, DefaultZipEntryFileExtensionPropertyName, DefaultZipEntryFileExtension);
         }
 
         public void Save(IPropertyBag propertyBag, bool clearDirty, bool saveAllProperties)
