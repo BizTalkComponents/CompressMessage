@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Text;
 using System.IO;
-using ICSharpCode.SharpZipLib.Core;
-using ICSharpCode.SharpZipLib.Zip;
+using System.IO.Compression;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Winterdom.BizTalk.PipelineTesting;
 
@@ -28,13 +28,15 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Tests.UnitTests
 
             var result = pipeline.Execute(msg);
 
-            ZipInputStream zipInputStream = new ZipInputStream(result.BodyPart.GetOriginalDataStream());
-            ZipEntry zipEntry = zipInputStream.GetNextEntry();
             int i = 1;
-            while (zipEntry != null)
+            ZipArchive zipArchive = new ZipArchive(result.BodyPart.GetOriginalDataStream());
+            foreach (var zipEntry in zipArchive.Entries)
             {
                 Assert.AreEqual(string.Format("invoice{0}.xml", i), zipEntry.Name);
-                zipEntry = zipInputStream.GetNextEntry();
+                using (var reader = new StreamReader(zipEntry.Open(), Encoding.Unicode))
+                {
+                    Assert.AreEqual(string.Format("<testmessage{0}></testmessage{0}>", i), reader.ReadToEnd());
+                }
                 i++;
             }
         }
@@ -57,14 +59,18 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Tests.UnitTests
 
             var result = pipeline.Execute(msg);
 
-            ZipInputStream zipInputStream = new ZipInputStream(result.BodyPart.GetOriginalDataStream());
-            ZipEntry zipEntry = zipInputStream.GetNextEntry();
-            while (zipEntry != null)
+            int i = 1;
+            ZipArchive zipArchive = new ZipArchive(result.BodyPart.GetOriginalDataStream());
+            foreach (var zipEntry in zipArchive.Entries)
             {
                 Guid g;
                 Assert.IsTrue(Guid.TryParse(Path.GetFileNameWithoutExtension(zipEntry.Name), out g));
                 Assert.AreEqual(".xml", Path.GetExtension(zipEntry.Name));
-                zipEntry = zipInputStream.GetNextEntry();
+                using (var reader = new StreamReader(zipEntry.Open(), Encoding.Unicode))
+                {
+                    Assert.AreEqual(string.Format("<testmessage{0}></testmessage{0}>", i), reader.ReadToEnd());
+                }
+                i++;
             }
         }
 
@@ -73,27 +79,25 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Tests.UnitTests
         {
             var pipeline = PipelineFactory.CreateEmptySendPipeline();
 
-            var component = new CompressMessage {DefaultZipEntryFileExtension = "xml"};
+            var component = new CompressMessage { DefaultZipEntryFileExtension = "xml" };
 
-            var msg = MessageHelper.CreateFromString("<testmessage1></testmessage1>");
-            
+            string messageContent = "<testmessage1></testmessage1>";
+            var msg = MessageHelper.CreateFromString(messageContent);
+
             pipeline.AddComponent(component, PipelineStage.Encode);
 
             var result = pipeline.Execute(msg);
 
-            ZipInputStream zipInputStream = new ZipInputStream(result.BodyPart.GetOriginalDataStream());
-            ZipEntry zipEntry = zipInputStream.GetNextEntry();
-            int i = 0;
-            while (zipEntry != null)
+            ZipArchive zipArchive = new ZipArchive(result.BodyPart.GetOriginalDataStream());
+            Assert.AreEqual(1, zipArchive.Entries.Count);
+            ZipArchiveEntry zipEntry = zipArchive.Entries[0];
+            Guid g;
+            Assert.IsTrue(Guid.TryParse(Path.GetFileNameWithoutExtension(zipEntry.Name), out g));
+            Assert.AreEqual(".xml", Path.GetExtension(zipEntry.Name));
+            using (var reader = new StreamReader(zipEntry.Open(), Encoding.Unicode))
             {
-                Guid g;
-                Assert.IsTrue(Guid.TryParse(Path.GetFileNameWithoutExtension(zipEntry.Name), out g));
-                Assert.AreEqual(".xml", Path.GetExtension(zipEntry.Name));
-                zipEntry = zipInputStream.GetNextEntry();
-                i++;
+                Assert.AreEqual(messageContent, reader.ReadToEnd());
             }
-
-            Assert.AreEqual(1,i);
         }
 
         [TestMethod]
