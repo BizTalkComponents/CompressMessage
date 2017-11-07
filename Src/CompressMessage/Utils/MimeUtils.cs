@@ -10,7 +10,8 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage.Utils
                 {
                     {"application/pdf", ".pdf"},
                     {"application/xml", ".xml"},
-                    {"text/xml", ".xml"}
+                    {"text/xml", ".xml"},
+                    {"text/plain", ".txt"}
                 };
 
 
